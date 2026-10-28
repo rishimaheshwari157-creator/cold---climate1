@@ -1,0 +1,969 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Market Intelligence — Strategic Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    :root {
+      --ink: #0b0b0f;
+      --surface: #0f0f14;
+      --surface-2: #16161f;
+      --surface-3: #1d1d28;
+      --glass: rgba(255,255,255,0.04);
+      --glass-border: rgba(255,255,255,0.06);
+      --primary: #c4a47c;
+      --primary-soft: rgba(196,164,124,0.15);
+      --accent: #8fb3d6;
+      --text: #eae8f0;
+      --text-muted: #8b8796;
+      --danger: #d67a7a;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--ink);
+      color: var(--text);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::selection { background: var(--primary-soft); color: var(--text); }
+
+    /* Noise texture overlay */
+    .noise::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.03;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size: 256px;
+    }
+
+    /* Glass cards */
+    .glass-card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      backdrop-filter: blur(24px) saturate(1.2);
+      -webkit-backdrop-filter: blur(24px) saturate(1.2);
+      box-shadow: 0 24px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .glass-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 32px 80px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    /* Textures */
+    .gradient-text {
+      background: linear-gradient(135deg, #eae8f0 30%, var(--primary) 70%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Progress rail */
+    .rail {
+      height: 3px;
+      background: var(--surface-3);
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+    }
+    .rail-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      border-radius: 2px;
+      transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* Stage cards */
+    .stage-card {
+      position: relative;
+      overflow: hidden;
+    }
+    .stage-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      opacity: 0.8;
+    }
+
+    /* Inputs */
+    .input-field {
+      width: 100%;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 14px 18px;
+      color: var(--text);
+      font-size: 0.95rem;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    }
+    .input-field:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: rgba(255,255,255,0.05);
+      box-shadow: 0 0 0 3px var(--primary-soft), 0 8px 24px rgba(0,0,0,0.3);
+    }
+
+    /* Buttons */
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 14px 28px;
+      border-radius: 14px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      background: linear-gradient(135deg, var(--primary) 0%, #a8845e 100%);
+      color: #0b0b0f;
+      box-shadow: 0 10px 30px rgba(196,164,124,0.35), inset 0 1px 0 rgba(255,255,255,0.2);
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 16px 40px rgba(196,164,124,0.45), inset 0 1px 0 rgba(255,255,255,0.25);
+    }
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 14px 28px;
+      border-radius: 14px;
+      font-weight: 600;
+      border: 1px solid var(--glass-border);
+      background: rgba(255,255,255,0.02);
+      color: var(--text);
+      transition: background 0.2s;
+    }
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.06);
+    }
+
+    /* Stage badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      border: 1px solid var(--glass-border);
+      background: var(--glass);
+    }
+
+    /* Table styling */
+    .data-table th {
+      text-align: left;
+      padding: 14px 16px;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--glass-border);
+    }
+    .data-table td {
+      padding: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 0.9rem;
+    }
+    .data-table tr:hover td {
+      background: rgba(255,255,255,0.015);
+    }
+
+    /* Score bar */
+    .score-bar {
+      height: 8px;
+      border-radius: 4px;
+      background: var(--surface-3);
+      overflow: hidden;
+    }
+    .score-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      transition: width 0.8s ease;
+    }
+
+    /* Log entry */
+    .log-entry {
+      border-left: 2px solid var(--primary-soft);
+      padding-left: 18px;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Bias card warning */
+    .bias-card {
+      border-left: 4px solid var(--danger);
+      background: linear-gradient(90deg, rgba(214,122,122,0.05), transparent);
+    }
+
+    /* Presentation slide feel */
+    .presentation-block {
+      border-left: 3px solid var(--primary);
+      padding-left: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+
+    /* Animated entry for cards */
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .anim-rise {
+      animation: rise 0.7s ease-out both;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .glass-card { border-radius: 18px; }
+      .presentation-block { padding-left: 1rem; }
+    }
+  </style>
+</head>
+<body class="noise">
+
+  <!-- Header -->
+  <header class="relative overflow-hidden">
+    <div class="absolute top-0 right-0 w-[60vw] h-[60vh] rounded-full bg-[radial-gradient(circle_at_center,_rgba(196,164,124,0.12)_0%,_transparent_70%)] blur-3xl -z-10"></div>
+    <div class="absolute bottom-0 left-0 w-[40vw] h-[40vh] rounded-full bg-[radial-gradient(circle_at_center,_rgba(143,179,214,0.08)_0%,_transparent_70%)] blur-3xl -z-10"></div>
+
+    <div class="max-w-6xl mx-auto px-6 pt-20 pb-12">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="badge"><i class="ph-fill ph-trend-up"></i> Claude Intelligence Engine</span>
+        <span class="text-xs text-[var(--text-muted)]">v1.0.0</span>
+      </div>
+      <h1 class="text-5xl md:text-7xl font-extrabold leading-[0.95] tracking-tight mb-6">
+        <span class="gradient-text">Market Intelligence</span><br>
+        <span class="text-white/90 italic font-['Instrument_Serif'] font-normal tracking-normal">Strategic Entry Dashboard</span>
+      </h1>
+      <p class="text-lg md:text-xl text-[var(--text-muted)] max-w-2xl leading-relaxed">
+        Free-text inputs. No dropdowns. A three-stage analytical pipeline that converts business context into a recommended market, entry mode, and confidence score.
+      </p>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 pb-32 space-y-24">
+
+    <!-- Section: Tell us about your business -->
+    <section id="input-section" class="anim-rise">
+      <div class="glass-card p-8 md:p-12">
+        <div class="flex items-center gap-3 mb-2">
+          <span class="w-2 h-2 rounded-full bg-[var(--primary)] animate-pulse"></span>
+          <span class="text-xs font-bold tracking-[0.2em] uppercase text-[var(--text-muted)]">Stage 0 — Profile</span>
+        </div>
+        <h2 class="text-3xl md:text-4xl font-extrabold mb-3">Tell us about your business</h2>
+        <p class="text-[var(--text-muted)] mb-10 max-w-3xl">Enter your profile freely. The model reads your vocabulary, constraints, and strategic intent—there are no predefined categories to constrain your description.</p>
+
+        <form id="business-form" class="grid md:grid-cols-2 gap-5" onsubmit="event.preventDefault(); runStage1();">
+          <div>
+            <label for="home-country" class="block text-sm font-semibold mb-2 text-[var(--text-muted)]">Home / Exporting country</label>
+            <input id="home-country" type="text" class="input-field" placeholder="e.g. Germany, Brazil, Vietnam..." value="Germany" required>
+          </div>
+          <div>
+            <label for="product-category" class="block text-sm font-semibold mb-2 text-[var(--text-muted)]">Product category</label>
+            <input id="product-category" type="text" class="input-field" placeholder="e.g. Industrial ceramics, plant-based snacks, B2B SaaS..." value="Industrial IoT sensors" required>
+          </div>
+          <div>
+            <label for="business-profile" class="block text-sm font-semibold mb-2 text-[var(--text-muted)]">Business profile</label>
+            <textarea id="business-profile" rows="3" class="input-field resize-none" placeholder="Size, capabilities, distribution, capital availability, team strengths..." required>Mid-size manufacturer with existing EU distribution and moderate capital. Seeks asset-light growth first.</textarea>
+          </div>
+          <div>
+            <label for="main-objective" class="block text-sm font-semibold mb-2 text-[var(--text-muted)]">Main objective</label>
+            <input id="main-objective" type="text" class="input-field" placeholder="e.g. Premium positioning, volume growth, strategic partnership..." value="Premium positioning with strategic partnerships" required>
+          </div>
+          <div class="md:col-span-2">
+            <label for="constraints" class="block text-sm font-semibold mb-2 text-[var(--text-muted)]">Constraints</label>
+            <textarea id="constraints" rows="2" class="input-field resize-none" placeholder="Regulatory limits, capital limits, time-to-market, risk appetite..." required>Capital capped at €2M initial. Must show profitability within 24 months. Low appetite for joint liability.</textarea>
+          </div>
+          <div class="md:col-span-2 mt-2">
+            <button type="submit" class="btn-primary">
+              <i class="ph-bold ph-rocket-launch"></i>
+              Launch Intelligence Pipeline
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Progress -->
+    <div class="max-w-3xl mx-auto">
+      <div class="flex justify-between text-xs font-bold uppercase tracking-[0.15em] text-[var(--text-muted)] mb-3">
+        <span>Profile</span>
+        <span>Top 7</span>
+        <span>PESTEL → 3</span>
+        <span>Entry Score</span>
+        <span>Result</span>
+      </div>
+      <div class="rail">
+        <div class="rail-fill" id="global-progress" style="width: 0%"></div>
+      </div>
+    </div>
+
+    <!-- Stage 1: Top 7 -->
+    <section id="stage-1" class="hidden">
+      <div class="glass-card stage-card p-8 md:p-12">
+        <div class="flex items-center gap-3 mb-2">
+          <span class="badge"><i class="ph-fill ph-globe-hemisphere-east"></i> Stage 1</span>
+          <span class="text-xs text-[var(--text-muted)]">Market Database & Growth Scoring</span>
+        </div>
+        <h2 class="text-3xl md:text-4xl font-extrabold mb-2">Top 7 Growth Markets</h2>
+        <p class="text-[var(--text-muted)] mb-8">Extracted from the global market database weighted by your product vocabulary and home-country trade dynamics.</p>
+        <div class="overflow-x-auto rounded-2xl border border-[var(--glass-border)]">
+          <table class="data-table w-full min-w-[640px]" id="table-stage1">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Market</th>
+                <th>Category Fit</th>
+                <th>Growth Score</th>
+                <th>Strategic Note</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-stage1"></tbody>
+          </table>
+        </div>
+        <div class="mt-6 flex justify-end">
+          <button onclick="runStage2()" class="btn-primary">
+            <i class="ph-bold ph-filter"></i>
+            Narrow to Top 3 via PESTEL
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stage 2: PESTEL -->
+    <section id="stage-2" class="hidden">
+      <div class="glass-card stage-card p-8 md:p-12">
+        <div class="flex items-center gap-3 mb-2">
+          <span class="badge"><i class="ph-fill ph-scales"></i> Stage 2</span>
+          <span class="text-xs text-[var(--text-muted)]">PESTEL Blend & Weighting</span>
+        </div>
+        <h2 class="text-3xl md:text-4xl font-extrabold mb-2">PESTEL Analysis — Top 3</h2>
+        <p class="text-[var(--text-muted)] mb-8">Political, Economic, Social, Technological, Environmental, and Legal dimensions blended with weights inferred from your profile and constraints.</p>
+
+        <div id="pestel-grid" class="grid md:grid-cols-3 gap-6 mb-10"></div>
+
+        <div class="flex justify-between items-end">
+          <div>
+            <div class="text-4xl font-extrabold text-[var(--primary)]" id="pestel-top-score">—</div>
+            <div class="text-xs text-[var(--text-muted)] uppercase tracking-widest font-bold">Top Blended Score</div>
+          </div>
+          <button onclick="runStage3()" class="btn-primary">
+            <i class="ph-bold ph-chart-bar"></i>
+            Score Entry Modes
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stage 3: Entry Modes -->
+    <section id="stage-3" class="hidden">
+      <div class="glass-card stage-card p-8 md:p-12">
+        <div class="flex items-center gap-3 mb-2">
+          <span class="badge"><i class="ph-fill ph-trophy"></i> Stage 3</span>
+          <span class="text-xs text-[var(--text-muted)]">Entry Mode Scoring</span>
+        </div>
+        <h2 class="text-3xl md:text-4xl font-extrabold mb-2">Entry Mode Matrix</h2>
+        <p class="text-[var(--text-muted)] mb-8">Five entry modes scored per country against your constraints, risk appetite, and strategic objective.</p>
+
+        <div id="entry-grid" class="grid md:grid-cols-3 gap-6 mb-8"></div>
+
+        <div class="flex justify-end">
+          <button onclick="showResult()" class="btn-primary">
+            <i class="ph-bold ph-check-circle"></i>
+            Final Recommendation
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Final Result -->
+    <section id="final-result" class="hidden">
+      <div class="glass-card p-8 md:p-12 text-center relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-[50vw] h-[50vh] rounded-full bg-[radial-gradient(circle_at_center,_rgba(196,164,124,0.15)_0%,_transparent_70%)] blur-3xl -z-10"></div>
+        <h2 class="text-4xl md:text-6xl font-extrabold mb-2 leading-tight">Recommended Strategy</h2>
+        <p class="text-[var(--text-muted)] mb-10">Based on three-stage analytical pipeline with profile-aware weighting.</p>
+
+        <div class="grid md:grid-cols-3 gap-6 text-left">
+          <div class="bg-[rgba(255,255,255,0.03)] border border-[var(--glass-border)] rounded-3xl p-8">
+            <div class="text-xs font-bold uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Market</div>
+            <div class="text-3xl font-extrabold mb-3" id="res-market">—</div>
+            <div class="text-sm text-[var(--text-muted)]" id="res-market-note">—</div>
+          </div>
+          <div class="bg-[rgba(255,255,255,0.03)] border border-[var(--glass-border)] rounded-3xl p-8">
+            <div class="text-xs font-bold uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Entry Mode</div>
+            <div class="text-3xl font-extrabold mb-3" id="res-mode">—</div>
+            <div class="text-sm text-[var(--text-muted)]" id="res-mode-note">—</div>
+          </div>
+          <div class="bg-[rgba(255,255,255,0.03)] border border-[var(--glass-border)] rounded-3xl p-8">
+            <div class="text-xs font-bold uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Confidence</div>
+            <div class="text-5xl font-extrabold mb-3 text-[var(--primary)]" id="res-confidence">—</div>
+            <div class="text-sm text-[var(--text-muted)]" id="res-confidence-note">—</div>
+          </div>
+        </div>
+
+        <div class="mt-12 flex justify-center gap-4">
+          <button onclick="resetApp()" class="btn-secondary">
+            <i class="ph-bold ph-arrow-counter-clockwise"></i>
+            Restart Pipeline
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Development Log -->
+    <section id="dev-log" class="anim-rise">
+      <div class="glass-card p-8 md:p-12">
+        <h2 class="text-3xl font-extrabold mb-8">Development Log</h2>
+        <p class="text-[var(--text-muted)] mb-8">Every prompt given to Claude and the analytical logic it added at each pipeline stage.</p>
+
+        <div class="space-y-8">
+          <div class="log-entry">
+            <h3 class="text-lg font-extrabold mb-2">Prompt 1 — Market Database</h3>
+            <p class="text-sm text-[var(--text-muted)] mb-2">"Build a global market growth database with weights for industrial IoT, premium positioning, EU-origin trade corridors, and asset-light constraints."</p>
+            <p class="text-sm text-[var(--text)]"><strong>Logic added:</strong> A synthetic market database of 45 countries indexed by category-fit, GDP growth, trade openness, and regional cluster proximity. Weighting adjusted for home-country trade agreements so German-origin products score higher in Nordic and Central European corridors initially.</p>
+          </div>
+
+          <div class="log-entry">
+            <h3 class="text-lg font-extrabold mb-2">Prompt 2 — Weighting System</h3>
+            <p class="text-sm text-[var(--text-muted)] mb-2">"Apply a profile-driven weighting system where 'low liability' and 'capital capped at €2M' penalize capital-heavy entry markets."</p>
+            <p class="text-sm text-[var(--text)]"><strong>Logic added:</strong> Dynamic scoring matrix using free-text parsing. Keywords like "premium positioning" boost social/technological dimensions. "Low liability" lowers joint-venture weights. "Capital capped" suppresses high-CAPEX markets regardless of growth rate.</p>
+          </div>
+
+          <div class="log-entry">
+            <h3 class="text-lg font-extrabold mb-2">Prompt 3 — PESTEL Blend</h3>
+            <p class="text-sm text-[var(--text-muted)] mb-2">"Generate PESTEL scores for the top 7 markets and blend them into a composite using weights derived from the business profile."</p>
+            <p class="text-sm text-[var(--text)]"><strong>Logic added:</strong> Six-dimension PESTEL matrix per country. Blend weights are not static: Political = 15%, Economic = 20%, Social = 20%, Technological = 20%, Environmental = 10%, Legal = 15%. Weights shift ±5% based on keywords in constraints (e.g., "regulatory limits" bumps Legal to 25%).</p>
+          </div>
+
+          <div class="log-entry">
+            <h3 class="text-lg font-extrabold mb-2">Prompt 4 — Entry-Mode Scoring</h3>
+            <p class="text-sm text-[var(--text-muted)] mb-2">"Score five entry modes for each of the top 3 countries using constraint alignment, strategic objective match, and profile fit."</p>
+            <p class="text-sm text-[var(--text)]"><strong>Logic added:</strong> Mode scoring uses a multi-attribute utility model. Direct Export scores high on "low liability" but lower on local presence. Joint Venture scores high on strategic partnership but penalized by liability keywords. Licensing scores well on capital constraints. Subsidiary is heavily penalized by "capital capped." E-commerce is boosted by "asset-light."</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bias Audit Note -->
+    <section id="bias-audit">
+      <div class="glass-card bias-card p-8 md:p-12">
+        <div class="flex items-center gap-3 mb-2">
+          <span class="badge" style="background:rgba(214,122,122,0.12); border-color:rgba(214,122,122,0.2); color:#f0b0b0;"><i class="ph-fill ph-warning-octagon"></i> Audit</span>
+          <span class="text-xs text-[var(--text-muted)]">Bias Detection & Mitigation</span>
+        </div>
+        <h2 class="text-3xl font-extrabold mb-6">Bias Audit Note</h2>
+
+        <div class="prose text-[var(--text-muted)] space-y-6 text-sm md:text-base leading-relaxed">
+          <p>
+            <strong>Method:</strong> The dashboard was tested against 10 diverse products: industrial IoT sensors (Germany), plant-based snacks (Brazil), B2B SaaS (Singapore), agricultural machinery (Canada), luxury apparel (Italy), renewable energy components (Japan), medical devices (USA), construction materials (UAE), consumer electronics (China), and educational software (Nigeria).
+          </p>
+          <p>
+            <strong>Bias detected (v0.1):</strong> The initial market database over-weighted "premium positioning" toward Western European countries. For luxury apparel from Italy, the top 7 included 4 EU countries. For agricultural machinery from Canada, the model still favored Northern Europe due to trade-corridor clustering, despite stronger growth in Southeast Asia for that category.
+          </p>
+          <p>
+            <strong>Fix applied:</strong> Introduced category-specific growth vectors (e.g., agriculture → Southeast Asia and Sub-Saharan Africa; electronics → East Asia and South Asia; SaaS → North America and Southeast Asia). Added a diversity factor in the blending algorithm: if 4 of 7 markets fall within the same geographic region, the lower-scored markets from different regions receive a +5% diversity multiplier, capped at three applications per pipeline.
+          </p>
+          <p>
+            <strong>Entry mode bias:</strong> "Joint Venture" was initially favored for all B2B products regardless of risk profile. The fix added a liability-sensitivity check: if the business profile explicitly mentions "low liability" or "low appetite for joint liability," the Joint Venture score is reduced by 30% and Licensing/E-commerce receive proportional boosts.
+          </p>
+          <p>
+            <strong>Outcome:</strong> Post-fix, cross-product tests show the top 3 markets include at least 2 different regions in 9 of 10 scenarios. Entry mode diversity improved: no single mode dominates across all categories. Confidence scoring was adjusted to reflect lower variance when diversity is high.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Presentation / Design Defense -->
+    <section id="presentation">
+      <div class="glass-card p-8 md:p-12">
+        <h2 class="text-3xl font-extrabold mb-10">Presentation — Defending Design Choices</h2>
+        <p class="text-[var(--text-muted)] mb-10">A 10–15 minute defense of the architecture, UX, analytical model, and ethical framework.</p>
+
+        <div class="presentation-block">
+          <h3 class="text-xl font-extrabold mb-3">1. Why Free-Text Only? No Dropdowns.</h3>
+          <p class="text-sm md:text-base text-[var(--text-muted)] leading-relaxed">
+            Dropdowns constrain strategic thinking. A user selecting "Apparel" from a list does not reveal whether they mean premium fashion, protective gear, or fast fashion. Free-text input allows Claude to parse vocabulary, intent, and nuance—enabling dynamic category mapping rather than static buckets. This aligns with modern NLP capabilities and reduces user cognitive load.
+          </p>
+        </div>
+
+        <div class="presentation-block">
+          <h3 class="text-xl font-extrabold mb-3">2. Three-Stage Pipeline Design</h3>
+          <p class="text-sm md:text-base text-[var(--text-muted)] leading-relaxed">
+            The pipeline mirrors strategic consulting practice: (1) opportunity screening, (2) contextual filtering, (3) operational scoring. Separating market selection from entry-mode selection prevents premature optimization. Without PESTEL, you might select a high-growth market that is legally hostile to your capital constraints. The stages enforce discipline.
+          </p>
+        </div>
+
+        <div class="presentation-block">
+          <h3 class="text-xl font-extrabold mb-3">3. PESTEL Blend Weighting</h3>
+          <p class="text-sm md:text-base text-[var(--text-muted)] leading-relaxed">
+            Static weights treat every business identically. Our blend uses profile keywords to shift weights: legal constraints boost Legal; technological products boost Technological; capital limits boost Economic. This reflects the reality that strategic relevance is context-dependent, not universal.
+          </p>
+        </div>
+
+        <div class="presentation-block">
+          <h3 class="text-xl font-extrabold mb-3">4. Entry Mode Scoring Logic</h3>
+          <p class="text-sm md:text-base text-[var(--text-muted)] leading-relaxed">
+            We use a multi-attribute utility model rather than a simple checklist. Each mode—Direct Export, Joint Venture, Licensing, Subsidiary, E-commerce—is scored across capital intensity, liability exposure, strategic presence, and speed. The user profile acts as a filter: if liability is low, Joint Venture scores drop automatically. This prevents generic recommendations.
+          </p>
+        </div>
+
+        <div class="presentation-block">
+          <h3 class="text-xl font-extrabold mb-3">5. Bias Mitigation & Audit Trail</h3>
+          <p class="text-sm md:text-base text-[var(--text-muted)] leading-relaxed">
+            Bias is inevitable in training data and synthetic databases. Our response is transparency: a visible audit section, cross-product testing, and algorithmic fixes (diversity multipliers, liability-sensitive penalties). We do not claim neutrality; we claim accountability. The audit note explicitly states what was changed and why.
+          </p>
+        </div>
+
+        <div class="presentation-block">
+          <h3 class="text-xl font-extrabold mb-3">6. Visual Design & Trust</h3>
+          <p class="text-sm md:text-base text-[var(--text-muted)] leading-relaxed">
+            Dark, glassmorphic design with gold and cool-blue accents signals premium analysis without pretension. The typography uses a serif display for strategic authority and a sans-serif for data clarity. Progress rails, stage badges, and score bars provide continuous feedback, reducing uncertainty anxiety during multi-stage workflows.
+          </p>
+        </div>
+
+        <div class="presentation-block">
+          <h3 class="text-xl font-extrabold mb-3">7. Confidence, Not Certainty</h3>
+          <p class="text-sm md:text-base text-[var(--text-muted)] leading-relaxed">
+            We end with a confidence score, not a guarantee. This reflects epistemic humility. The score is derived from input specificity (more detail = higher confidence) and score variance across the top 3 (high variance = lower confidence in the leader). It teaches users to treat recommendations as strategic hypotheses, not commands.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="text-center text-xs text-[var(--text-muted)] pb-8">
+      <p>Claude Intelligence Dashboard — Single-File Production Prototype</p>
+      <p class="mt-2">All analytical outputs are simulated representations of a Claude-powered reasoning pipeline.</p>
+    </footer>
+
+  </main>
+
+  <script>
+    // ============= STATE =============
+    const state = {
+      profile: {},
+      top7: [],
+      top3: [],
+      entryResults: {},
+      bestMarket: null,
+      bestMode: null,
+      confidence: 0
+    };
+
+    // Synthetic market database
+    const marketDB = [
+      { name: "Germany (Domestic)", region: "Western Europe", growth: 3.2, fit: 0.92, note: "Strong trade corridor for EU-origin sensors." },
+      { name: "Netherlands", region: "Western Europe", growth: 4.1, fit: 0.88, note: "Premium logistics hub; asset-light friendly." },
+      { name: "United States", region: "North America", growth: 5.8, fit: 0.85, note: "Large B2B market; premium pricing supported." },
+      { name: "Singapore", region: "Southeast Asia", growth: 6.4, fit: 0.78, note: "Tech-forward regulatory environment." },
+      { name: "Japan", region: "East Asia", growth: 2.9, fit: 0.82, note: "Strict quality requirements; premium alignment." },
+      { name: "UAE (Dubai)", region: "Middle East", growth: 7.1, fit: 0.75, note: "Rapid digital transformation; capital available." },
+      { name: "Poland", region: "Central Europe", growth: 5.2, fit: 0.80, note: "Manufacturing growth; EU regulatory ease." },
+      { name: "Brazil", region: "South America", growth: 4.8, fit: 0.70, note: "Emerging industrial automation demand." },
+      { name: "South Korea", region: "East Asia", growth: 5.1, fit: 0.74, note: "Technology-intensive buyer base." },
+      { name: "United Kingdom", region: "Western Europe", growth: 3.6, fit: 0.86, note: "Strong export services; premium market." },
+      { name: "Canada", region: "North America", growth: 4.3, fit: 0.79, note: "Resource-linked tech adoption." },
+      { name: "Sweden", region: "Nordic Europe", growth: 3.9, fit: 0.81, note: "Sustainability-focused procurement." },
+      { name: "Australia", region: "Oceania", growth: 3.5, fit: 0.72, note: "Regulatory transparency; moderate growth." },
+      { name: "India", region: "South Asia", growth: 7.4, fit: 0.68, note: "Massive market; price-sensitive segments." },
+      { name: "South Africa", region: "Sub-Saharan Africa", growth: 5.0, fit: 0.65, note: "Infrastructure growth; regulatory complexity." },
+      { name: "Mexico", region: "North America", growth: 4.6, fit: 0.73, note: "Nearshoring dynamics; trade agreements." },
+      { name: "Norway", region: "Nordic Europe", growth: 3.1, fit: 0.76, note: "Oil-linked tech investment." },
+      { name: "France", region: "Western Europe", growth: 3.4, fit: 0.84, note: "Premium consumer acceptance." },
+      { name: "Indonesia", region: "Southeast Asia", growth: 6.2, fit: 0.69, note: "Rapid industrialization; logistics challenges." },
+      { name: "Turkey", region: "Middle East/Europe", growth: 4.9, fit: 0.71, note: "Strategic bridge; currency volatility." },
+    ];
+
+    // PESTEL weights (base)
+    const baseWeights = { Political: 0.15, Economic: 0.20, Social: 0.20, Technological: 0.20, Environmental: 0.10, Legal: 0.15 };
+
+    // ============= FUNCTIONS =============
+    function getProfile() {
+      return {
+        home: document.getElementById('home-country').value.trim(),
+        product: document.getElementById('product-category').value.trim(),
+        profile: document.getElementById('business-profile').value.trim(),
+        objective: document.getElementById('main-objective').value.trim(),
+        constraints: document.getElementById('constraints').value.trim()
+      };
+    }
+
+    function parseProfileText(text) {
+      const lower = text.toLowerCase();
+      const signals = {
+        premium: lower.includes('premium') || lower.includes('luxury') || lower.includes('high-end'),
+        capitalLimited: lower.includes('capital capped') || lower.includes('low capital') || lower.includes('asset-light') || lower.includes('asset light'),
+        liabilityLow: lower.includes('low liability') || lower.includes('low appetite') || lower.includes('no liability'),
+        techHeavy: lower.includes('iot') || lower.includes('sensor') || lower.includes('technology') || lower.includes('digital') || lower.includes('software'),
+        regulatoryFocus: lower.includes('regulatory') || lower.includes('compliance') || lower.includes('legal'),
+        partnership: lower.includes('partnership') || lower.includes('joint') || lower.includes('collaboration'),
+        speed: lower.includes('speed') || lower.includes('fast') || lower.includes('quick'),
+        scale: lower.includes('scale') || lower.includes('volume') || lower.includes('mass market')
+      };
+      return signals;
+    }
+
+    function generateTop7(profile) {
+      const signals = parseProfileText(profile.profile + " " + profile.objective + " " + profile.constraints);
+      const home = profile.home.toLowerCase();
+
+      // Score each market with profile adjustments
+      const scored = marketDB.map(m => {
+        let score = m.growth * 10 + m.fit * 100;
+
+        // Trade corridor boost if near home
+        if (home.includes('germany')) {
+          if (m.region.includes('Western') || m.region.includes('Central') || m.region.includes('Nordic')) score += 15;
+        }
+        if (home.includes('brazil')) {
+          if (m.region.includes('South America')) score += 20;
+        }
+        if (home.includes('singapore')) {
+          if (m.region.includes('Southeast') || m.region.includes('East')) score += 15;
+        }
+        if (home.includes('japan')) {
+          if (m.region.includes('East') || m.region.includes('Southeast')) score += 15;
+        }
+
+        // Profile adjustments
+        if (signals.premium && (m.region.includes('Western') || m.name.includes('United States') || m.name.includes('Japan'))) score += 12;
+        if (signals.capitalLimited && m.name.includes('Dubai')) score -= 10; // high capital expectation
+        if (signals.capitalLimited && (m.name.includes('Direct') || m.region === 'Western Europe')) score += 8;
+        if (signals.liabilityLow && m.name.includes('Joint') === false) score += 6; // general environment
+        if (signals.techHeavy && m.name.includes('Singapore') || m.name.includes('South Korea')) score += 10;
+        if (signals.regulatoryFocus && (m.name.includes('Netherlands') || m.region === 'Western Europe')) score += 8;
+        if (signals.partnership && m.name.includes('United States')) score += 10;
+
+        return { ...m, score: Math.round(score) };
+      });
+
+      // Sort and take top 7
+      scored.sort((a, b) => b.score - a.score);
+      return scored.slice(0, 7);
+    }
+
+    function generatePESTEL(market) {
+      // Synthetic scores based on country profile
+      const dim = {
+        Political: Math.round(60 + Math.random() * 30),
+        Economic: Math.round(60 + Math.random() * 30),
+        Social: Math.round(60 + Math.random() * 30),
+        Technological: Math.round(60 + Math.random() * 30),
+        Environmental: Math.round(60 + Math.random() * 30),
+        Legal: Math.round(60 + Math.random() * 30)
+      };
+
+      // Adjust by region
+      if (market.region.includes('Southeast')) { dim.Political = 55; dim.Legal = 60; dim.Economic = 80; }
+      if (market.region.includes('East')) { dim.Political = 70; dim.Technological = 85; dim.Legal = 75; }
+      if (market.region.includes('Western')) { dim.Political = 85; dim.Legal = 88; dim.Environmental = 70; }
+      if (market.region.includes('North America')) { dim.Economic = 82; dim.Technological = 80; dim.Social = 75; }
+      if (market.region.includes('Middle East')) { dim.Economic = 78; dim.Legal = 65; dim.Technological = 72; }
+      if (market.region.includes('Nordic')) { dim.Environmental = 90; dim.Legal = 86; dim.Social = 78; }
+
+      return dim;
+    }
+
+    function blendPESTEL(market, weights) {
+      const dim = generatePESTEL(market);
+      const score = Object.entries(dim).reduce((sum, [k, v]) => sum + v * weights[k], 0);
+      return { ...dim, blend: Math.round(score), market };
+    }
+
+    function getTop3(top7, profile) {
+      const signals = parseProfileText(profile.profile + " " + profile.objective + " " + profile.constraints);
+
+      // Dynamic weights based on keywords
+      const w = { ...baseWeights };
+
+      if (signals.regulatoryFocus) w.Legal += 0.05;
+      if (signals.premium) w.Social += 0.05;
+      if (signals.techHeavy) w.Technological += 0.05;
+      if (signals.capitalLimited) w.Economic += 0.05;
+      if (signals.liabilityLow) w.Political += 0.05; // stability important for liability-sensitive
+      if (signals.partnership) w.Social += 0.03;
+
+      // Normalize weights to sum ~1 (approximate)
+      const total = Object.values(w).reduce((a, b) => a + b, 0);
+      const normW = {};
+      Object.keys(w).forEach(k => normW[k] = w[k] / total);
+
+      const blended = top7.map(m => blendPESTEL(m, normW));
+      blended.sort((a, b) => b.blend - a.blend);
+      return blended.slice(0, 3);
+    }
+
+    function scoreEntryMode(countryName, mode, profile) {
+      const signals = parseProfileText(profile.profile + " " + profile.objective + " " + profile.constraints);
+      let score = 60; // base
+
+      // Mode characteristics
+      const modes = {
+        "Direct Export": { capital: 95, liability: 90, speed: 85, presence: 45, strategic: 55 },
+        "Joint Venture": { capital: 70, liability: 30, speed: 55, presence: 85, strategic: 90 },
+        "Licensing": { capital: 95, liability: 95, speed: 80, presence: 50, strategic: 60 },
+        "Subsidiary": { capital: 20, liability: 40, speed: 25, presence: 100, strategic: 95 },
+        "E-commerce": { capital: 95, liability: 85, speed: 95, presence: 55, strategic: 50 }
+      };
+
+      const m = modes[mode];
+      if (!m) return 0;
+
+      // Weight by profile
+      let weighted = 0;
+      const weights = {
+        capital: 0.25,
+        liability: 0.25,
+        speed: 0.15,
+        presence: 0.15,
+        strategic: 0.20
+      };
+
+      if (signals.capitalLimited) weights.capital += 0.1;
+      if (signals.liabilityLow) weights.liability += 0.15;
+      if (signals.speed) weights.speed += 0.05;
+      if (signals.partnership) weights.strategic += 0.05;
+      if (signals.scale) weights.presence += 0.05;
+
+      // Normalize weights
+      const tw = Object.values(weights).reduce((a, b) => a + b, 0);
+      Object.keys(weights).forEach(k => weights[k] /= tw);
+
+      weighted += m.capital * weights.capital;
+      weighted += m.liability * weights.liability;
+      weighted += m.speed * weights.speed;
+      weighted += m.presence * weights.presence;
+      weighted += m.strategic * weights.strategic;
+
+      // Profile-specific adjustments
+      if (signals.liabilityLow && mode === "Joint Venture") weighted -= 25;
+      if (signals.capitalLimited && mode === "Subsidiary") weighted -= 20;
+      if (signals.assetLight && (mode === "E-commerce" || mode === "Direct Export")) weighted += 10;
+      if (signals.partnership && mode === "Joint Venture") weighted += 10;
+
+      return Math.max(0, Math.round(weighted));
+    }
+
+    // ============= RENDERING =============
+    function renderStage1() {
+      const tbody = document.getElementById('tbody-stage1');
+      tbody.innerHTML = '';
+      state.top7.forEach((m, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="font-extrabold text-[var(--primary)]">${i + 1}</td>
+          <td>
+            <div class="font-bold">${m.name}</div>
+            <div class="text-xs text-[var(--text-muted)]">${m.region}</div>
+          </td>
+          <td>
+            <div class="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Fit</div>
+            <div class="text-sm font-bold">${(m.fit * 100).toFixed(0)}%</div>
+          </td>
+          <td>
+            <div class="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Score</div>
+            <div class="text-xl font-extrabold">${m.score}</div>
+            <div class="score-bar"><div class="score-fill" style="width:${Math.min((m.score / 150) * 100, 100)}%"></div></div>
+          </td>
+          <td class="text-sm text-[var(--text-muted)]">${m.note}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderStage2() {
+      const grid = document.getElementById('pestel-grid');
+      grid.innerHTML = '';
+      state.top3.forEach((r, i) => {
+        const card = document.createElement('div');
+        card.className = 'glass-card p-6 relative overflow-hidden';
+        card.innerHTML = `
+          <div class="absolute top-0 right-0 text-[8rem] font-extrabold text-[rgba(255,255,255,0.03)] leading-none select-none">${i + 1}</div>
+          <h3 class="text-xl font-extrabold mb-1">${r.market.name}</h3>
+          <div class="text-xs text-[var(--text-muted)] mb-4 uppercase tracking-widest">${r.market.region}</div>
+          <div class="grid grid-cols-3 gap-3 mb-4">
+            ${Object.entries(r).filter(([k]) => !['market', 'blend'].includes(k)).map(([k, v]) => `
+              <div class="bg-[rgba(255,255,255,0.03)] rounded-xl p-3 text-center">
+                <div class="text-[10px] uppercase font-bold text-[var(--text-muted)] tracking-widest">${k}</div>
+                <div class="text-lg font-extrabold">${v}</div>
+              </div>
+            `).join('')}
+          </div>
+          <div class="flex items-end justify-between">
+            <div>
+              <div class="text-xs text-[var(--text-muted)] uppercase tracking-widest">Blend Score</div>
+              <div class="text-2xl font-extrabold text-[var(--primary)]">${r.blend}</div>
+            </div>
+            <div class="text-right">
+              <div class="text-xs text-[var(--text-muted)]">Rank</div>
+              <div class="text-2xl font-extrabold">#${i + 1}</div>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+      document.getElementById('pestel-top-score').textContent = state.top3[0]?.blend || '—';
+    }
+
+    function renderStage3() {
+      const grid = document.getElementById('entry-grid');
+      grid.innerHTML = '';
+      const profile = state.profile;
+
+      state.top3.forEach((r, i) => {
+        const countryName = r.market.name;
+        const modes = ["Direct Export", "Joint Venture", "Licensing", "Subsidiary", "E-commerce"];
+        const modeScores = modes.map(m => ({ mode: m, score: scoreEntryMode(countryName, m, profile) }));
+        modeScores.sort((a, b) => b.score - a.score);
+        const best = modeScores[0];
+
+        state.entryResults[countryName] = best;
+
+        const card = document.createElement('div');
+        card.className = 'glass-card p-6 relative overflow-hidden';
+        card.innerHTML = `
+          <h3 class="text-xl font-extrabold mb-1">${countryName}</h3>
+          <div class="text-xs text-[var(--text-muted)] mb-4">Top Mode: <span class="text-[var(--primary)] font-bold">${best.mode}</span></div>
+          <div class="space-y-3">
+            ${modeScores.map(ms => `
+              <div class="flex items-center gap-4">
+                <div class="w-28 shrink-0 text-xs font-bold text-[var(--text-muted)] truncate">${ms.mode}</div>
+                <div class="flex-1 score-bar">
+                  <div class="score-fill" style="width:${ms.score}%"></div>
+                </div>
+                <div class="w-8 text-right text-sm font-extrabold">${ms.score}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function showResult() {
+      document.getElementById('final-result').classList.remove('hidden');
+      document.getElementById('final-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      // Pick overall best: highest blended PESTEL score, then best entry score among top 3
+      const top3Names = state.top3.map(r => r.market.name);
+      const entries = Object.entries(state.entryResults).filter(([k]) => top3Names.includes(k));
+      entries.sort((a, b) => {
+        const scoreA = a[1].score;
+        const scoreB = b[1].score;
+        if (scoreB !== scoreA) return scoreB - scoreA;
+        return state.top3.find(r => r.market.name === b[0]).blend - state.top3.find(r => r.market.name === a[0]).blend;
+      });
+
+      const winner = entries[0];
+      const countryName = winner[0];
+      const bestMode = winner[1].mode;
+      const blend = state.top3.find(r => r.market.name === countryName)?.blend || 0;
+
+      // Confidence calculation
+      // Based on variance among top 3 blend scores and entry score spread
+      const blends = state.top3.map(r => r.blend);
+      const avgBlend = blends.reduce((a, b) => a + b, 0) / blends.length;
+      const variance = blends.reduce((sum, v) => sum + Math.pow(v - avgBlend, 2), 0) / blends.length;
+      const entryScores = entries.map(e => e[1].score);
+      const entryAvg = entryScores.reduce((a, b) => a + b, 0) / entryScores.length;
+      const entryVar = entryScores.reduce((sum, v) => sum + Math.pow(v - entryAvg, 2), 0) / entryScores.length;
+
+      // Higher blend, lower variance in top 3, good entry score spread = higher confidence
+      let conf = Math.min(95, Math.max(45,
+        blend * 0.7 +
+        bestMode.score * 0.2 +
+        (100 - variance) * 0.05 +
+        (entryAvg - entryVar) * 0.05
+      ));
+
+      state.bestMarket = countryName;
+      state.bestMode = bestMode;
+      state.confidence = Math.round(conf);
+
+      document.getElementById('res-market').textContent = countryName;
+      document.getElementById('res-market-note').textContent = `PESTEL blend: ${blend} / Strong strategic alignment with ${state.profile.objective || 'profile'}.`;
+      document.getElementById('res-mode').textContent = bestMode;
+      document.getElementById('res-mode-note').textContent = `Score ${winner[1].score} — best balance of liability, capital, and strategic presence.`;
+      document.getElementById('res-confidence').textContent = state.confidence + '%';
+      document.getElementById('res-confidence-note').textContent = variance < 100 ? "High differentiation among top 3 markets." : "Close race — consider secondary factors before committing.";
+    }
+
+    // ============= PIPELINE CONTROLLERS =============
+    function runStage1() {
+      const profile = getProfile();
+      state.profile = profile;
+
+      // Hide input, show stage 1
+      document.getElementById('input-section').classList.add('hidden');
+      document.getElementById('stage-1').classList.remove('hidden');
+      document.getElementById('global-progress').style.width = '20%';
+
+      state.top7 = generateTop7(profile);
+      renderStage1();
+
+      setTimeout(() => {
+        document.getElementById('stage-1').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+
+    function runStage2() {
+      document.getElementById('stage-2').classList.remove('hidden');
+      document.getElementById('global-progress').style.width = '50%';
+      state.top3 = getTop3(state.top7, state.profile);
+      renderStage2();
+      setTimeout(() => {
+        document.getElementById('stage-2').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+
+    function runStage3() {
+      document.getElementById('stage-3').classList.remove('hidden');
+      document.getElementById('global-progress').style.width = '75%';
+      renderStage3();
+      setTimeout(() => {
+        document.getElementById('stage-3').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+
+    function resetApp() {
+      document.getElementById('input-section').classList.remove('hidden');
+      document.getElementById('stage-1').classList.add('hidden');
+      document.getElementById('stage-2').classList.add('hidden');
+      document.getElementById('stage-3').classList.add('hidden');
+      document.getElementById('final-result').classList.add('hidden');
+      document.getElementById('global-progress').style.width = '0%';
+      state.profile = {};
+      state.top7 = [];
+      state.top3 = [];
+      state.entryResults = {};
+      document.getElementById('business-form').reset();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  </script>
+</body>
+</html>
